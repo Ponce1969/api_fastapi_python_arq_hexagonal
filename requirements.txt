@@ -1,0 +1,17 @@
+# requirements.txt
+
+# Dependencias principales del proyecto
+fastapi
+uvicorn[standard]
+sqlalchemy
+asyncpg
+passlib[argon2]
+python-jose[cryptography]
+alembic
+pydantic
+pydantic-settings
+python-dotenv
+
+# Dependencias para desarrollo y testing (puedes moverlas a un requirements-dev.txt si lo prefieres)
+pytest
+httpx
