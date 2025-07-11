@@ -37,8 +37,8 @@ services:
       # El host 'db' se refiere al nombre del servicio de la base de datos en Docker Compose
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       # Otras variables de entorno que tu aplicación necesite (ej. para JWT, logging)
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
-      JWT_ALGORITHM: ${JWT_ALGORITHM}
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM}
       ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES}
       LOG_LEVEL: ${LOG_LEVEL}
       DEBUG: ${DEBUG}

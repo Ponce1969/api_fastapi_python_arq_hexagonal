@@ -69,6 +69,8 @@ class SQLAlchemyBaseRepositorio(ABC):
         self.db_session.add(orm_instance)
         await self.db_session.flush()
         await self.db_session.refresh(orm_instance)
+        # Commit para hacer persistentes los cambios una vez finalizada la operación
+        await self.db_session.commit()
 
         return self._to_domain_entity(orm_instance)
 
@@ -78,6 +80,7 @@ class SQLAlchemyBaseRepositorio(ABC):
         if orm_instance:
             await self.db_session.delete(orm_instance)
             await self.db_session.flush()
+            await self.db_session.commit()
 
     async def get_all(self, skip: int = 0, limit: int = 100) -> List[DomainEntity]:
         """Obtiene una lista de todas las entidades con paginación."""
