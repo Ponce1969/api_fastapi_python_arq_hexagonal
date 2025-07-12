@@ -1,11 +1,13 @@
 # app/api/v2/api.py
 from fastapi import APIRouter
 
-from app.api.v2.endpoints import auth # Importamos el nuevo router de autenticación
+from app.api.v2.endpoints import auth, contactos, roles  # Importamos routers
 
 api_router = APIRouter()
 
 # Registramos el router de autenticación con un prefijo y una etiqueta para agruparlo en la documentación
 api_router.include_router(auth.router, prefix="/auth", tags=["Autenticación"])
+api_router.include_router(contactos.router, tags=["Contactos"])
+api_router.include_router(roles.router, prefix="/roles", tags=["Roles"])
 
-# Aquí registrarás otros routers a medida que los vayas creando (ej. usuarios, roles, etc.)
+# Otros routers se registrarán aquí a medida que se implementen (usuarios, roles, etc.)
