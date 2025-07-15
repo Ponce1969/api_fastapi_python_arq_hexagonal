@@ -91,11 +91,14 @@ def get_usuario_servicio(
 
 def get_rol_servicio(
     repo: Annotated[IRolRepositorio, Depends(get_rol_repositorio)],
+    usuario_repo: Annotated[IUsuarioRepositorio, Depends(get_usuario_repositorio)],
+    db: DBSession,
 ) -> RolServicio:
     """
     Dependencia que proporciona el servicio de aplicación de roles.
+    También proporciona el repositorio de usuarios y la sesión de DB para operaciones de asignación/remoción de roles.
     """
-    return RolServicio(rol_repositorio=repo)
+    return RolServicio(rol_repositorio=repo, usuario_repositorio=usuario_repo, db_session=db)
 
 def get_contacto_servicio(
     repo: Annotated[IContactoRepositorio, Depends(get_contacto_repositorio)],

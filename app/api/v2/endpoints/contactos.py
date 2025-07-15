@@ -8,7 +8,7 @@ from app.core.deps import (
     ContactoServicio,
 )
 from app.dominio.entidades.usuario import Usuario
-from app.esquemas.contacto import ContactoCreate, ContactoRead
+from app.esquemas.contacto import ContactoCreate, ContactoRead, ContactoUpdate
 from app.dominio.excepciones.dominio_excepciones import ContactoNoEncontradoError
 
 router = APIRouter()
@@ -44,7 +44,10 @@ async def crear_o_actualizar_mi_contacto(
     """Crea o actualiza el perfil de contacto del usuario autenticado."""
     return await contacto_servicio.guardar_datos_contacto(
         user_id=current_user.id,
+        name=contacto_in.name,
+        email=contacto_in.email,
         phone=contacto_in.phone,
+        message=contacto_in.message,
         address=contacto_in.address,
         city=contacto_in.city,
         country=contacto_in.country,
@@ -69,5 +72,26 @@ async def obtener_contacto_por_id(
     """Devuelve un contacto por su UUID."""
     try:
         return await contacto_servicio.obtener_contacto_por_id(contacto_id)
+    except ContactoNoEncontradoError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+
+@router.patch(
+    "/contactos/{contacto_id}/marcar",
+    response_model=ContactoRead,
+    summary="Marcar contacto como leído o no leído",
+)
+async def marcar_contacto(
+    contacto_id: UUID,
+    contacto_update: ContactoUpdate,
+    _current_user: Usuario = Depends(get_current_user),  # puede añadirse verificación de rol aquí
+    contacto_servicio: ContactoServicio = Depends(get_contacto_servicio),
+):
+    """Marca un contacto como leído o no leído."""
+    try:
+        return await contacto_servicio.marcar_contacto_como_leido(
+            contacto_id=contacto_id,
+            leido=contacto_update.is_read
+        )
     except ContactoNoEncontradoError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

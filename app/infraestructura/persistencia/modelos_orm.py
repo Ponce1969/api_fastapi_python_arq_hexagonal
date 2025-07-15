@@ -101,11 +101,15 @@ class ContactoORM(Base):
 
     # Columnas del perfil de contacto
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    phone: Mapped[str] = mapped_column(String, nullable=False)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    email: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
+    message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    phone: Mapped[str] = mapped_column(String(25), nullable=False)
     address: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     city: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     country: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     zip_code: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # Clave foránea para la relación uno a uno con UsuarioORM
     # Es única para garantizar que un usuario solo tenga un perfil de contacto.

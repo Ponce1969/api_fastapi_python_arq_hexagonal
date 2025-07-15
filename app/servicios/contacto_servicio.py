@@ -18,7 +18,10 @@ class ContactoServicio:
     async def guardar_datos_contacto(
         self,
         user_id: UUID,
+        name: str,
+        email: str,
         phone: str,
+        message: Optional[str] = None,
         address: Optional[str] = None,
         city: Optional[str] = None,
         country: Optional[str] = None,
@@ -33,7 +36,10 @@ class ContactoServicio:
         if contacto_existente:
             # Si existe, actualizarlo usando el método de la entidad.
             contacto_existente.actualizar_datos(
+                name=name,
+                email=email,
                 phone=phone,
+                message=message,
                 address=address,
                 city=city,
                 country=country,
@@ -44,7 +50,10 @@ class ContactoServicio:
             # Si no existe, crear una nueva entidad de perfil de contacto.
             nuevo_perfil_contacto = Contacto(
                 user_id=user_id,
+                name=name,
+                email=email,
                 phone=phone,
+                message=message,
                 address=address,
                 city=city,
                 country=country,
@@ -70,6 +79,12 @@ class ContactoServicio:
         """Obtiene una lista paginada de todos los contactos."""
         return await self.contacto_repositorio.get_all(skip=skip, limit=limit)
 
+    async def marcar_contacto_como_leido(self, contacto_id: UUID, leido: bool = True) -> Contacto:
+        """Marca un contacto como leído o no leído."""
+        contacto = await self.obtener_contacto_por_id(contacto_id)
+        contacto.marcar_como_leido(leido)
+        return await self.contacto_repositorio.save(contacto)
+        
     async def eliminar_contacto(self, contacto_id: UUID) -> None:
         """Elimina un contacto por su ID."""
         await self.obtener_contacto_por_id(contacto_id)
