@@ -1,5 +1,5 @@
 # app/infraestructura/persistencia/sesion.py
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Callable
 from sqlalchemy.ext.asyncio import (
     create_async_engine,
     AsyncSession,
@@ -26,7 +26,7 @@ async_engine = create_async_engine(
 
 # --- Configuración de la Factoría de Sesiones Asíncronas ---
 # async_sessionmaker es una factoría para crear nuevas instancias de AsyncSession.
-AsyncSessionLocal = async_sessionmaker(
+AsyncSessionFactory = async_sessionmaker(
     autocommit=False, # No hacer commit automáticamente después de cada operación
     autoflush=False, # No hacer flush automáticamente antes de cada consulta
     bind=async_engine, # Vincula esta factoría al motor de la base de datos
@@ -37,6 +37,21 @@ AsyncSessionLocal = async_sessionmaker(
     expire_on_commit=False,
 )
 
+# Alias para compatibilidad con código existente
+AsyncSessionLocal = AsyncSessionFactory
+
+# --- Función para obtener la fábrica de sesiones ---
+def get_session_factory() -> async_sessionmaker[AsyncSession]:
+    """
+    Proporciona la fábrica de sesiones para crear nuevas instancias de AsyncSession.
+    Esta función es útil para patrones como Unit of Work que necesitan crear
+    sus propias sesiones bajo demanda.
+    
+    Returns:
+        async_sessionmaker: La fábrica de sesiones configurada para la aplicación.
+    """
+    return AsyncSessionFactory
+
 # --- Dependencia para Obtener una Sesión de Base de Datos ---
 # Esta función es un "generador de dependencias" que FastAPI utilizará.
 # Asegura que cada solicitud HTTP obtenga su propia sesión de DB,
@@ -46,6 +61,9 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     Proporciona una sesión de base de datos asíncrona para inyección de dependencias.
     Asegura que la sesión se cierre correctamente después de su uso.
     El `async with` se encarga de abrir la sesión, manejar errores (con rollback) y cerrarla.
+    
+    Nota: Para patrones como Unit of Work que necesitan crear sus propias sesiones,
+    utilice get_session_factory() en su lugar.
     """
-    async with AsyncSessionLocal() as session:
+    async with AsyncSessionFactory() as session:
         yield session

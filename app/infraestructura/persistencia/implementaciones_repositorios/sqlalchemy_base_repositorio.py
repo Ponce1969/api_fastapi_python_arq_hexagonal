@@ -54,6 +54,8 @@ class SQLAlchemyBaseRepositorio(ABC):
         Guarda una entidad de dominio en la base de datos.
         Si la entidad ya tiene un ID y existe, la actualiza.
         Si no, la crea.
+        
+        Nota: No realiza commit. El commit debe ser manejado por el UnitOfWork.
         """
         orm_instance = None
         if hasattr(domain_entity, 'id') and domain_entity.id:
@@ -69,18 +71,21 @@ class SQLAlchemyBaseRepositorio(ABC):
         self.db_session.add(orm_instance)
         await self.db_session.flush()
         await self.db_session.refresh(orm_instance)
-        # Commit para hacer persistentes los cambios una vez finalizada la operación
-        await self.db_session.commit()
+        # Ya no hacemos commit aquí, será responsabilidad del UnitOfWork
 
         return self._to_domain_entity(orm_instance)
 
     async def delete(self, entity_id: UUID) -> None:
-        """Elimina una entidad por su ID."""
+        """
+        Elimina una entidad por su ID.
+        
+        Nota: No realiza commit. El commit debe ser manejado por el UnitOfWork.
+        """
         orm_instance = await self.db_session.get(self.orm_model, entity_id)
         if orm_instance:
             await self.db_session.delete(orm_instance)
             await self.db_session.flush()
-            await self.db_session.commit()
+            # Ya no hacemos commit aquí, será responsabilidad del UnitOfWork
 
     async def get_all(self, skip: int = 0, limit: int = 100) -> List[DomainEntity]:
         """Obtiene una lista de todas las entidades con paginación."""

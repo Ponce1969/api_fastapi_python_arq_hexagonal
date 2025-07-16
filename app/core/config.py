@@ -32,6 +32,11 @@ class Settings(BaseSettings):
     SMTP_USERNAME: Optional[str] = None
     SMTP_PASSWORD: Optional[str] = None
     SMTP_USE_TLS: bool = True
+    
+    # Configuración de la documentación de la API
+    DOCS_USERNAME: str = "frontend_team"
+    DOCS_PASSWORD: str = "api_access_2025"
+    DOCS_ENABLED: bool = True
 
 # Instancia única de la configuración que será importada en otros módulos.
 settings = Settings()

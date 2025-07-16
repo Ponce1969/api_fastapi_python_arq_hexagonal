@@ -21,11 +21,15 @@ class ContactoRepositorioImpl(SQLAlchemyBaseRepositorio, IContactoRepositorio):
             return None
         return Contacto(
             id=orm_instance.id,
+            name=orm_instance.name,
+            email=orm_instance.email,
             phone=orm_instance.phone,
+            message=orm_instance.message,
             address=orm_instance.address,
             city=orm_instance.city,
             country=orm_instance.country,
             zip_code=orm_instance.zip_code,
+            is_read=orm_instance.is_read,
             user_id=orm_instance.user_id,
             created_at=orm_instance.created_at,
             updated_at=orm_instance.updated_at,
@@ -37,11 +41,15 @@ class ContactoRepositorioImpl(SQLAlchemyBaseRepositorio, IContactoRepositorio):
         """
         Puebla un modelo ORM de Contacto desde una entidad de dominio Contacto.
         """
+        orm_instance.name = domain_entity.name
+        orm_instance.email = domain_entity.email
         orm_instance.phone = domain_entity.phone
+        orm_instance.message = domain_entity.message
         orm_instance.address = domain_entity.address
         orm_instance.city = domain_entity.city
         orm_instance.country = domain_entity.country
         orm_instance.zip_code = domain_entity.zip_code
+        orm_instance.is_read = domain_entity.is_read
         orm_instance.user_id = domain_entity.user_id
 
     async def get_by_user_id(self, user_id: UUID) -> Optional[Contacto]:
