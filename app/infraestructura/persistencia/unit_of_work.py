@@ -5,12 +5,14 @@ Este módulo define la clase SQLAlchemyUnitOfWork que permite agrupar múltiples
 de repositorio en una única transacción atómica, asegurando la consistencia de los datos
 y facilitando la implementación de casos de uso complejos.
 """
+import logging
 from typing import Callable, AsyncContextManager, Optional, Any, Type
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.exc import SQLAlchemyError
 from contextlib import asynccontextmanager
 
 from app.infraestructura.persistencia.excepciones.persistencia_excepciones import ExcepcionesMapper
+from app.dominio.excepciones.dominio_excepciones import DominioExcepcion
 
 # Importar interfaces de repositorios y UnitOfWork
 from app.dominio.interfaces.unit_of_work import IUnitOfWork
@@ -102,16 +104,22 @@ class SQLAlchemyUnitOfWork(IUnitOfWork):
         try:
             if exc_type:
                 # Si hay una excepción, hacemos rollback
+                logging.debug(f"UnitOfWork: Realizando rollback debido a excepción: {exc_type.__name__ if exc_type else 'None'}")
                 await self.rollback()
                 
                 # Si es una excepción técnica de SQLAlchemy u otra excepción no de dominio,
                 # la mapeamos a una excepción de dominio y la relanzamos
                 if exc_val and not isinstance(exc_val, Exception):
                     # Si no es una instancia de Exception, no intentamos mapearla
+                    logging.debug(f"UnitOfWork: No se mapea el valor {exc_val} porque no es una excepción")
                     return False
                     
-                if exc_val and not hasattr(exc_val, "__module__") or not exc_val.__module__.startswith("app.dominio"):
+                # Verificar si es una excepción de dominio
+                is_domain_exception = isinstance(exc_val, DominioExcepcion)
+                
+                if exc_val and not is_domain_exception:
                     # Mapear la excepción técnica a una excepción de dominio
+                    logging.debug(f"UnitOfWork: Mapeando excepción técnica {exc_type.__name__} a excepción de dominio")
                     domain_exception = ExcepcionesMapper.wrap_exception(exc_val)
                     # Relanzar la excepción de dominio preservando el traceback
                     raise domain_exception from exc_val
@@ -120,11 +128,14 @@ class SQLAlchemyUnitOfWork(IUnitOfWork):
                 return False
             else:
                 # Si no hay excepción, hacemos commit
+                logging.debug("UnitOfWork: Realizando commit de la transacción")
                 await self.commit()
                 return False
         except Exception as e:
             # Si ocurre una excepción durante el commit/rollback, la mapeamos y relanzamos
-            if not hasattr(e, "__module__") or not e.__module__.startswith("app.dominio"):
+            logging.error(f"UnitOfWork: Error durante commit/rollback: {str(e)}")
+            if not isinstance(e, DominioExcepcion):
+                logging.debug(f"UnitOfWork: Mapeando excepción {e.__class__.__name__} a excepción de dominio")
                 domain_exception = ExcepcionesMapper.wrap_exception(e)
                 raise domain_exception from e
             raise
@@ -190,12 +201,15 @@ class SQLAlchemyUnitOfWork(IUnitOfWork):
             raise RuntimeError("Cannot begin transaction on a UnitOfWork not yet entered.")
             
         try:
+            logging.debug("UnitOfWork.begin: Iniciando contexto de sesión para operaciones directas")
             yield self.session  # Devuelve directamente la sesión, no self
             # No hacemos commit/rollback aquí, eso es responsabilidad del __aexit__ del UoW
             # o de quien use este método si no hay un UoW principal envolvente
         except Exception as e:
             # Mapear excepciones técnicas a excepciones de dominio
-            if not hasattr(e, "__module__") or not e.__module__.startswith("app.dominio"):
+            logging.error(f"UnitOfWork.begin: Error durante operaciones directas con la sesión: {str(e)}")
+            if not isinstance(e, DominioExcepcion):
+                logging.debug(f"UnitOfWork.begin: Mapeando excepción {e.__class__.__name__} a excepción de dominio")
                 domain_exception = ExcepcionesMapper.wrap_exception(e)
                 raise domain_exception from e
             # Si ya es una excepción de dominio, simplemente la relanzamos

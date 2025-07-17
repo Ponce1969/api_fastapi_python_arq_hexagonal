@@ -80,7 +80,8 @@ class Contacto:
             self.updated_at = datetime.now(timezone.utc)
 
     def __eq__(self, other):
-        if not isinstance(other, Self):
+        # Evitamos usar isinstance con Self que causa problemas en Python 3.12
+        if not hasattr(other, "id") or not isinstance(other.id, UUID):
             return NotImplemented
         return self.id == other.id
 

@@ -1,10 +1,11 @@
 # app/infraestructura/persistencia/implementaciones_repositorios/usuario_repositorio_impl.py
 from typing import Optional, List
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dominio.entidades.usuario import Usuario
 from app.dominio.repositorios.usuario_repositorio import IUsuarioRepositorio
-from app.infraestructura.persistencia.modelos_orm import UsuarioORM
+from app.infraestructura.persistencia.modelos_orm import UsuarioORM, RolORM
 from .sqlalchemy_base_repositorio import SQLAlchemyBaseRepositorio
 
 
@@ -52,6 +53,46 @@ class UsuarioRepositorioImpl(SQLAlchemyBaseRepositorio, IUsuarioRepositorio):
     async def get_by_email(self, email: str) -> Optional[Usuario]:
         """Obtiene un usuario por su dirección de correo electrónico."""
         return await self._get_one_by_filter({"email": email})
+
+    async def asignar_rol(self, usuario_id: UUID, rol_id: UUID) -> None:
+        """Asigna un rol a un usuario.
+        
+        Args:
+            usuario_id: UUID del usuario
+            rol_id: UUID del rol a asignar
+        """
+        # Obtener los modelos ORM
+        usuario_orm: UsuarioORM = await self.db_session.get(UsuarioORM, usuario_id)
+        rol_orm: RolORM = await self.db_session.get(RolORM, rol_id)
+        
+        # Verificar que ambos existan
+        if not usuario_orm or not rol_orm:
+            return
+        
+        # Asignar el rol si no está ya asignado
+        if rol_orm not in usuario_orm.roles:
+            usuario_orm.roles.append(rol_orm)
+            # No hacemos commit aquí, eso lo maneja el UnitOfWork
+    
+    async def remover_rol(self, usuario_id: UUID, rol_id: UUID) -> None:
+        """Remueve un rol de un usuario.
+        
+        Args:
+            usuario_id: UUID del usuario
+            rol_id: UUID del rol a remover
+        """
+        # Obtener los modelos ORM
+        usuario_orm: UsuarioORM = await self.db_session.get(UsuarioORM, usuario_id)
+        rol_orm: RolORM = await self.db_session.get(RolORM, rol_id)
+        
+        # Verificar que ambos existan
+        if not usuario_orm or not rol_orm:
+            return
+        
+        # Remover el rol si está asignado
+        if rol_orm in usuario_orm.roles:
+            usuario_orm.roles.remove(rol_orm)
+            # No hacemos commit aquí, eso lo maneja el UnitOfWork
 
     # Los métodos get_by_id, delete, y get_all son heredados directamente
     # de SQLAlchemyBaseRepositorio y funcionan sin necesidad de reimplementación.

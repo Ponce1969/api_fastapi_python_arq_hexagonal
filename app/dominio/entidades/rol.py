@@ -1,7 +1,7 @@
 # app/dominio/entidades/rol.py
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
-from typing import Optional, Self
+from typing import Optional
 
 class Rol:
     def __init__(
@@ -18,6 +18,12 @@ class Rol:
         self.created_at = created_at if created_at is not None else datetime.now(timezone.utc)
         self.updated_at = updated_at if updated_at is not None else self.created_at
 
+    def actualizar_nombre(self, nuevo_nombre: str):
+        """Actualiza el nombre del rol y la fecha de modificación."""
+        if self.name != nuevo_nombre:
+            self.name = nuevo_nombre
+            self.updated_at = datetime.now(timezone.utc)
+            
     def actualizar_descripcion(self, nueva_descripcion: Optional[str]):
         """Actualiza la descripción del rol y la fecha de modificación."""
         if self.description != nueva_descripcion:
@@ -25,7 +31,7 @@ class Rol:
             self.updated_at = datetime.now(timezone.utc)
 
     def __eq__(self, other):
-        if not isinstance(other, Self):
+        if not isinstance(other, Rol):
             return NotImplemented
         return self.id == other.id # La igualdad se basa en el ID único
 

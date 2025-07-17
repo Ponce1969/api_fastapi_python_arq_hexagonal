@@ -1,6 +1,6 @@
 # app/servicios/autenticacion_servicio.py
 from app.servicios.usuario_servicio import UsuarioServicio
-from app.core.seguridad.jwt import JWTHandler
+from app.dominio.interfaces.jwt_handler import IJWTHandler
 from app.dominio.excepciones.dominio_excepciones import CredencialesInvalidasError
 
 
@@ -10,7 +10,7 @@ class AutenticacionServicio:
     Orquesta la verificación de credenciales y la generación de tokens.
     """
 
-    def __init__(self, usuario_servicio: UsuarioServicio, jwt_handler: JWTHandler):
+    def __init__(self, usuario_servicio: UsuarioServicio, jwt_handler: IJWTHandler):
         """
         Inicializa el servicio de autenticación.
         Depende del servicio de usuarios para validar credenciales y de un
@@ -34,5 +34,5 @@ class AutenticacionServicio:
             CredencialesInvalidasError: Si el email o la contraseña son incorrectos.
         """
         usuario = await self.usuario_servicio.verificar_credenciales(email, password)
-        access_token = self.jwt_handler.create_access_token(data={"sub": str(usuario.id)})
+        access_token = self.jwt_handler.create_access_token(subject=usuario.id)
         return access_token

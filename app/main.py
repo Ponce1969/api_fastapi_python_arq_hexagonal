@@ -15,6 +15,7 @@ from app.api.v2.api import api_router
 from app.dominio.excepciones.dominio_excepciones import DominioExcepcion
 from app.infraestructura.persistencia.sesion import async_engine
 from app.infraestructura.persistencia.modelos_orm import Base
+from app.api.middlewares.exception_handler import registrar_manejadores_excepciones
 
 # Configuración del logger
 logging.basicConfig(
@@ -56,28 +57,12 @@ async def lifespan(app: FastAPI):
 def add_exception_handlers(app: FastAPI) -> None:
     """
     Configura los manejadores de excepciones globales para la aplicación.
-    """
-    @app.exception_handler(DominioExcepcion)
-    async def dominio_exception_handler(request: Request, exc: DominioExcepcion):
-        """
-        Maneja excepciones de dominio y las convierte en respuestas HTTP apropiadas.
-        """
-        logger.warning(f"Excepción de dominio: {str(exc)}")
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,  # O el código HTTP apropiado según el tipo de DominioExcepcion
-            content={"detail": str(exc)},
-        )
     
-    @app.exception_handler(Exception)
-    async def general_exception_handler(request: Request, exc: Exception):
-        """
-        Maneja excepciones no capturadas y las convierte en respuestas HTTP 500.
-        """
-        logger.error(f"Error no manejado: {str(exc)}", exc_info=True)
-        return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"detail": "Error interno del servidor"},
-        )
+    Utiliza el módulo exception_handler para registrar manejadores específicos
+    para cada tipo de excepción de dominio.
+    """
+    # Registrar todos los manejadores de excepciones definidos en el módulo exception_handler
+    registrar_manejadores_excepciones(app)
 
 def add_middlewares(app: FastAPI) -> None:
     """
@@ -146,7 +131,7 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     
-    # Configurar manejadores de excepciones
+    # Agregar manejadores de excepciones (utilizando el nuevo sistema)
     add_exception_handlers(app)
     
     # Configurar middlewares

@@ -1,8 +1,9 @@
 # app/dominio/repositorios/usuario_repositorio.py
-from typing import List, Optional, Protocol
+from typing import List, Optional, Protocol, Tuple
 from uuid import UUID
 
 from app.dominio.entidades.usuario import Usuario
+from app.dominio.entidades.rol import Rol
 
 
 class IUsuarioRepositorio(Protocol):
@@ -30,4 +31,12 @@ class IUsuarioRepositorio(Protocol):
 
     async def delete(self, usuario_id: UUID) -> None:
         """Elimina un usuario por su ID."""
+        ...
+        
+    async def asignar_rol(self, usuario_id: UUID, rol_id: UUID) -> None:
+        """Asigna un rol a un usuario."""
+        ...
+        
+    async def remover_rol(self, usuario_id: UUID, rol_id: UUID) -> None:
+        """Remueve un rol de un usuario."""
         ...

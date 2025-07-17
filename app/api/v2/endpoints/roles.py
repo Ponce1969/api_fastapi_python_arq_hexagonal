@@ -68,7 +68,9 @@ async def actualizar_rol(
         return await rol_servicio.actualizar_rol(
             rol_id=rol_id, name=rol_in.name, description=rol_in.description
         )
-    except (RolNoEncontradoError, RolYaExisteError) as e:
+    except RolNoEncontradoError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except RolYaExisteError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
