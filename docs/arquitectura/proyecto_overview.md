@@ -20,8 +20,10 @@ Este proyecto utiliza un stack de tecnologías modernas para asegurar rendimient
 * **Pydantic**: Para la validación de datos, serialización/deserialización y gestión de configuraciones.
 * **SQLAlchemy 2.0**: ORM robusto y flexible para interactuar con la base de datos relacional.
 * **PostgreSQL**: Base de datos relacional poderosa, fiable y escalable.
+* **Redis**: Base de datos en memoria utilizada para rate limiting y caché.
 * **`asyncpg` (o `psycopg2-binary`)**: Controlador asíncrono para PostgreSQL.
 * **`python-dotenv`**: Para la gestión segura de variables de entorno.
+* **`fastapi-limiter`**: Implementación de rate limiting para proteger la API contra abusos.
 * **`passlib[argon2]`**: Hashing de contraseñas seguro utilizando el algoritmo Argon2.
 * **`python-jose`**: Implementación de JSON Web Tokens (JWT) para la autenticación y autorización.
 * **Uvicorn**: Servidor ASGI de alto rendimiento para ejecutar la aplicación FastAPI.

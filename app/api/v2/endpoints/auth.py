@@ -1,6 +1,6 @@
 # app/api/v2/endpoints/auth.py
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm # <-- ¡NUEVA IMPORTACIÓN!
 
 # Importaciones de servicios y esquemas
@@ -14,6 +14,9 @@ from app.dominio.entidades.usuario import Usuario
 from app.core.deps import get_usuario_servicio, get_autenticacion_servicio, get_current_user # <-- ¡ACTUALIZADA LA IMPORTACIÓN!
 from app.dominio.excepciones.dominio_excepciones import EmailYaRegistradoError, CredencialesInvalidasError
 
+# Importación del rate limiter
+from app.infraestructura.seguridad.rate_limiter import rate_limit, AUTH_RATE_LIMIT
+
 router = APIRouter()
 
 
@@ -24,7 +27,9 @@ router = APIRouter()
     summary="Registrar un nuevo usuario",
     description="Crea una nueva cuenta de usuario en el sistema.",
 )
+@rate_limit(AUTH_RATE_LIMIT)  # Limita a 20 solicitudes por minuto (definido en rate_limiter.py)
 async def register_user(
+    _request: Request,  # Necesario para el rate limiter (usado por el decorador)
     usuario_in: UsuarioCrear,
     usuario_servicio: Annotated[UsuarioServicio, Depends(get_usuario_servicio)],
 ):
@@ -47,7 +52,9 @@ async def register_user(
     description="Autentica a un usuario y devuelve un token de acceso JWT.",
     # Usa OAuth2PasswordRequestForm para un login estándar compatible con OpenAPI/Swagger UI
 )
+@rate_limit(AUTH_RATE_LIMIT)  # Limita a 20 solicitudes por minuto (definido en rate_limiter.py)
 async def login_for_access_token(
+    _request: Request,  # Necesario para el rate limiter (usado por el decorador)
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()], # <-- FastAPI maneja la forma del formulario
     auth_servicio: Annotated[AutenticacionServicio, Depends(get_autenticacion_servicio)], # <-- Inyecta el servicio de autenticación
 ):

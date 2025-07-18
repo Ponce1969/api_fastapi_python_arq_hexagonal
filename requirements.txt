@@ -13,6 +13,8 @@ pydantic-settings
 python-dotenv
 email-validator
 python-multipart
+fastapi-limiter
+redis
 
 # Dependencias para desarrollo y testing (puedes moverlas a un requirements-dev.txt si lo prefieres)
 pytest

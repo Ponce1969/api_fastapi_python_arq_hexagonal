@@ -9,6 +9,7 @@ Bienvenido a la documentación de la API de FastAPI v2. Este proyecto implementa
 #### 📐 Arquitectura y Diseño
 - [Visión General del Proyecto](/docs/arquitectura/proyecto_overview.md) - Descripción detallada de la arquitectura, tecnologías y estructura del proyecto.
 - [Patrón Unit of Work](/docs/patrones/unit_of_work.md) - Documentación completa sobre la implementación del patrón Unit of Work y el sistema de mapeo de excepciones.
+- [Rate Limiting con Redis](/docs/patrones/rate_limiting.md) - Documentación sobre la implementación de rate limiting usando Redis y fastapi-limiter.
 
 #### 📋 Guías y Tutoriales
 - [Guía de Implementación](/docs/guias/implementacion.md) - Lista de verificación paso a paso para el desarrollo de nuevas funcionalidades.
@@ -18,6 +19,7 @@ Bienvenido a la documentación de la API de FastAPI v2. Este proyecto implementa
 ### Requisitos Previos
 - Python 3.12+
 - PostgreSQL
+- Redis (para rate limiting)
 - Docker y Docker Compose (opcional)
 
 ### Instalación

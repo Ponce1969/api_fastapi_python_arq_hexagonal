@@ -2,7 +2,7 @@
 from uuid import UUID
 from typing import List, Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 
 from app.core.deps import (
     get_current_user,
@@ -15,6 +15,9 @@ from app.core.deps import (
 from app.dominio.entidades.usuario import Usuario
 from app.dominio.excepciones.dominio_excepciones import UsuarioNoEncontradoError, EmailYaRegistradoError
 from app.esquemas.usuario import UsuarioLeer, UsuarioActualizar
+
+# Importación del rate limiter
+from app.infraestructura.seguridad.rate_limiter import rate_limit, DEFAULT_RATE_LIMIT, SENSITIVE_RATE_LIMIT
 
 router = APIRouter()
 
@@ -53,9 +56,11 @@ async def obtener_usuario(
 @router.put(
     "/usuarios/{user_id}",
     response_model=UsuarioLeer,
-    summary="Actualizar usuario",
+    summary="Actualizar datos de usuario",
 )
+@rate_limit(SENSITIVE_RATE_LIMIT)  # Limita a 50 solicitudes por minuto
 async def actualizar_usuario(
+    _request: Request,  # Necesario para el rate limiter (usado por el decorador)
     user_id: UUID,
     usuario_in: UsuarioActualizar,
     current_user: Usuario = Depends(get_current_user),
@@ -78,7 +83,9 @@ async def actualizar_usuario(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Eliminar usuario",
 )
+@rate_limit(SENSITIVE_RATE_LIMIT)  # Limita a 50 solicitudes por minuto
 async def eliminar_usuario(
+    _request: Request,  # Necesario para el rate limiter (usado por el decorador)
     user_id: UUID,
     current_user: Usuario = Depends(get_current_user),
     usuario_servicio: UsuarioServicio = Depends(get_usuario_servicio),
@@ -98,7 +105,9 @@ async def eliminar_usuario(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Asignar un rol a un usuario",
 )
+@rate_limit(SENSITIVE_RATE_LIMIT)  # Limita a 50 solicitudes por minuto
 async def asignar_rol_a_usuario(
+    _request: Request,  # Necesario para el rate limiter (usado por el decorador)
     user_id: UUID,
     rol_id: UUID,
     current_user: Annotated[Usuario, Depends(get_current_user)],
@@ -116,7 +125,9 @@ async def asignar_rol_a_usuario(
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Remover un rol de un usuario",
 )
+@rate_limit(SENSITIVE_RATE_LIMIT)  # Limita a 50 solicitudes por minuto
 async def remover_rol_de_usuario(
+    _request: Request,  # Necesario para el rate limiter (usado por el decorador)
     user_id: UUID,
     rol_id: UUID,
     current_user: Annotated[Usuario, Depends(get_current_user)],

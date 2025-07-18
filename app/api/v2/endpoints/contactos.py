@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 
 from app.core.deps import (
     get_contacto_servicio,
@@ -10,6 +10,9 @@ from app.core.deps import (
 from app.dominio.entidades.usuario import Usuario
 from app.esquemas.contacto import ContactoCreate, ContactoRead, ContactoUpdate
 from app.dominio.excepciones.dominio_excepciones import ContactoNoEncontradoError
+
+# Importación del rate limiter
+from app.infraestructura.seguridad.rate_limiter import rate_limit, DEFAULT_RATE_LIMIT, SENSITIVE_RATE_LIMIT
 
 router = APIRouter()
 
@@ -36,7 +39,9 @@ async def obtener_mi_contacto(
     summary="Crear o actualizar mi perfil de contacto",
     status_code=status.HTTP_201_CREATED,
 )
+@rate_limit(SENSITIVE_RATE_LIMIT)  # Limita a 50 solicitudes por minuto
 async def crear_o_actualizar_mi_contacto(
+    _request: Request,  # Necesario para el rate limiter (usado por el decorador)
     contacto_in: ContactoCreate,
     current_user: Usuario = Depends(get_current_user),
     contacto_servicio: ContactoServicio = Depends(get_contacto_servicio),
@@ -81,7 +86,9 @@ async def obtener_contacto_por_id(
     response_model=ContactoRead,
     summary="Marcar contacto como leído o no leído",
 )
+@rate_limit(DEFAULT_RATE_LIMIT)  # Limita a 100 solicitudes por minuto
 async def marcar_contacto(
+    _request: Request,  # Necesario para el rate limiter (usado por el decorador)
     contacto_id: UUID,
     contacto_update: ContactoUpdate,
     _current_user: Usuario = Depends(get_current_user),  # puede añadirse verificación de rol aquí

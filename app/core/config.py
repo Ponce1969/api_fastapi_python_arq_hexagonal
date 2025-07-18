@@ -34,9 +34,13 @@ class Settings(BaseSettings):
     SMTP_USE_TLS: bool = True
     
     # Configuración de la documentación de la API
-    DOCS_USERNAME: str = "frontend_team"
-    DOCS_PASSWORD: str = "api_access_2025"
+    DOCS_USERNAME: str  # Debe definirse en .env
+    DOCS_PASSWORD: str  # Debe definirse en .env
     DOCS_ENABLED: bool = True
+    
+    # Configuración de Redis para rate limiting
+    REDIS_URL: Optional[str] = None  # Debe definirse en .env si se habilita rate limiting
+    RATE_LIMITING_ENABLED: bool = False  # Por defecto desactivado, activar en .env
 
 # Instancia única de la configuración que será importada en otros módulos.
 settings = Settings()

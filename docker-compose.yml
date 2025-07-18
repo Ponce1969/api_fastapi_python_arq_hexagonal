@@ -1,17 +1,22 @@
 
 services:
-  # Servicio de base de datos para pruebas
-  test_db:
-    image: postgres:16-alpine # Imagen de PostgreSQL ligera
-    environment:
-      # Variables de entorno para la configuración de la base de datos de pruebas
-      POSTGRES_DB: ${POSTGRES_DB_TEST:-app_test} # Nombre de la DB, usa default si no está en .env
-      POSTGRES_USER: ${POSTGRES_USER_TEST:-testuser} # Usuario de la DB
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD_TEST:-testpassword} # Contraseña de la DB
+  # Servicio de Redis para rate limiting
+  redis:
+    image: redis:7-alpine
     ports:
-      - "5433:5432" # Mapea el puerto 5432 del contenedor al 5433 del host para evitar conflictos
+      - "6380:6379"
     volumes:
-      - pgdata_test:/var/lib/postgresql/data # Volumen para persistencia de datos de la DB de pruebas
+      - redis_data:/data
+    command: redis-server --appendonly yes  # Habilita persistencia AOF
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Nota: Las pruebas utilizan SQLite en memoria configurado en tests/conftest.py
+  # No se requiere un servicio de base de datos dedicado para pruebas
 
   # Servicio de base de datos para desarrollo principal
   db:
@@ -28,7 +33,7 @@ services:
       - pgdata:/var/lib/postgresql/data # Volumen para persistencia de datos de la DB de desarrollo
 
   # Servicio de la aplicación FastAPI
-  app:
+  fastapi:
     build: . # Docker construirá la imagen desde el Dockerfile en el directorio actual
     ports:
       - "8000:8000" # Mapea el puerto 8000 del contenedor al puerto 8000 del host
@@ -59,7 +64,7 @@ services:
     # Sobrescribe el CMD del Dockerfile para habilitar el hot-reloading en desarrollo
     command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
-# Definición de volúmenes para persistencia de datos de PostgreSQL
+# Definición de volúmenes para persistencia de datos
 volumes:
   pgdata:
-  pgdata_test:
+  redis_data:

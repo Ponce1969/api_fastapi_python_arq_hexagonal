@@ -16,6 +16,7 @@ from app.dominio.excepciones.dominio_excepciones import DominioExcepcion
 from app.infraestructura.persistencia.sesion import async_engine
 from app.infraestructura.persistencia.modelos_orm import Base
 from app.api.middlewares.exception_handler import registrar_manejadores_excepciones
+from app.infraestructura.seguridad.rate_limiter import setup_rate_limiter, close_rate_limiter
 
 # Configuración del logger
 logging.basicConfig(
@@ -45,12 +46,30 @@ async def lifespan(app: FastAPI):
         logger.error(f"Error al inicializar la base de datos: {e}", exc_info=True)
         # Dependiendo de tu estrategia, podrías querer que la aplicación no arranque si la DB falla
 
+    # Inicializar rate limiter si está habilitado
+    if settings.RATE_LIMITING_ENABLED:
+        try:
+            await setup_rate_limiter(app)
+            logger.info("Rate limiter inicializado correctamente.")
+        except Exception as e:
+            logger.error(f"Error al inicializar rate limiter: {e}", exc_info=True)
+            # La aplicación puede continuar sin rate limiting si hay error
+    
     # Inicializar otros recursos (cache, servicios externos, etc.)
     
     yield  # La aplicación se ejecuta aquí
     
     # Limpieza de recursos
     logger.info("Cerrando la aplicación...")
+    
+    # Cerrar rate limiter si fue inicializado
+    if settings.RATE_LIMITING_ENABLED:
+        try:
+            await close_rate_limiter()
+            logger.info("Rate limiter cerrado correctamente.")
+        except Exception as e:
+            logger.error(f"Error al cerrar rate limiter: {e}", exc_info=True)
+    
     # Si necesitas cerrar el pool de conexiones explícitamente:
     # await async_engine.dispose()
 
