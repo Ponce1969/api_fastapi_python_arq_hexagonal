@@ -5,6 +5,7 @@ fastapi
 uvicorn[standard]
 sqlalchemy
 asyncpg
+psycopg2-binary
 passlib[argon2]
 python-jose[cryptography]
 alembic
@@ -18,4 +19,6 @@ redis
 
 # Dependencias para desarrollo y testing (puedes moverlas a un requirements-dev.txt si lo prefieres)
 pytest
+pytest-asyncio
+pytest-cov
 httpx

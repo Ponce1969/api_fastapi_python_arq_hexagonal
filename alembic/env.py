@@ -1,10 +1,12 @@
 # Añadimos la ruta del proyecto para que Alembic pueda encontrar los módulos de la app
 import sys
+import os
 from pathlib import Path
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
+from dotenv import load_dotenv
 
 from alembic import context
 
@@ -16,6 +18,25 @@ from app.infraestructura.persistencia import modelos_orm
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+
+# Cargar variables de entorno desde el archivo .env
+# Buscar el archivo .env en el directorio raíz del proyecto
+project_root = Path(__file__).parent.parent
+env_path = project_root / ".env"
+load_dotenv(env_path)
+
+# Construir la URL de la base de datos dinámicamente desde variables de entorno
+db_user = os.getenv("POSTGRES_USER", "postgres")
+db_password = os.getenv("POSTGRES_PASSWORD", "password")
+db_host = os.getenv("POSTGRES_HOST", "localhost")
+db_port = os.getenv("POSTGRES_PORT", "5432")
+db_name = os.getenv("POSTGRES_DB", "app_db")
+
+# Construir la URL de conexión para Alembic (usando driver síncrono psycopg2)
+database_url = f"postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+
+# Establecer la URL de la base de datos en la configuración de Alembic
+config.set_main_option("sqlalchemy.url", database_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
