@@ -22,3 +22,9 @@ pytest
 pytest-asyncio
 pytest-cov
 httpx
+
+# Verificación de tipos estáticos
+mypy
+types-passlib
+types-python-jose
+types-redis

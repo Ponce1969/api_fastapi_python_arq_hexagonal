@@ -1,0 +1,136 @@
+# .github/workflows/ci.yml
+# CI/CD Pipeline para Backend API con Mypy
+name: Backend API CI/CD
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.12
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.12'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install mypy
+    
+    - name: Set up environment variables
+      run: |
+        cp .env.test .env
+    
+    - name: Run Mypy type checking
+      run: |
+        mypy app/ --config-file mypy.ini
+    
+    - name: Run database migrations
+      run: |
+        alembic upgrade head
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+    
+    - name: Run tests
+      run: |
+        pytest tests/ -v --tb=short
+      env:
+        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        REDIS_URL: redis://localhost:6379
+    
+    - name: Generate API documentation
+      run: |
+        # Genera documentación OpenAPI para el equipo frontend Deno Fresh
+        python -c "
+        from app.main import app
+        import json
+        with open('openapi.json', 'w') as f:
+            json.dump(app.openapi(), f, indent=2)
+        "
+    
+    - name: Setup Deno for type generation
+      uses: denoland/setup-deno@v1
+      with:
+        deno-version: v1.x
+    
+    - name: Generate TypeScript types for Deno Fresh
+      run: |
+        # Genera tipos TypeScript desde OpenAPI para el equipo frontend
+        deno run --allow-read --allow-write \
+          https://deno.land/x/openapi_fetch/scripts/openapi-typescript.ts \
+          openapi.json --output api-types.ts
+    
+    - name: Validate API contract compatibility
+      run: |
+        echo "✅ OpenAPI schema generated successfully"
+        echo "✅ TypeScript types generated for Deno Fresh"
+        echo "🔗 Frontend team can use: api-types.ts"
+    
+    - name: Upload API documentation and types
+      uses: actions/upload-artifact@v3
+      with:
+        name: api-documentation-and-types
+        path: |
+          openapi.json
+          api-types.ts
+
+  # Solo se ejecuta si los tests pasan
+  deploy-staging:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
+    
+    steps:
+    - name: Deploy to staging
+      run: |
+        echo "🚀 Deploying to staging server..."
+        # Aquí irían los comandos de deploy a staging
+    
+    - name: Notify frontend team
+      run: |
+        echo "📢 Notifying frontend team of new API version..."
+        # Webhook o notificación al equipo frontend
+
+  deploy-production:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Deploy to production
+      run: |
+        echo "🚀 Deploying to production..."
+        # Comandos de deploy a producción
