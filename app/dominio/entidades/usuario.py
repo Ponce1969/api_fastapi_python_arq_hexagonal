@@ -1,6 +1,6 @@
 # app/dominio/entidades/usuario.py
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 @dataclass
@@ -14,8 +14,8 @@ class Usuario:
     full_name: str
     is_active: bool = True
     id: UUID = field(default_factory=uuid4)
-    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
-    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def actualizar_nombre(self, nuevo_nombre: str):
         """Actualiza el nombre del usuario y la fecha de modificación."""
@@ -50,4 +50,4 @@ class Usuario:
 
     def _marcar_como_actualizado(self):
         """Establece la fecha de actualización a la actual."""
-        self.updated_at = datetime.now(UTC)
+        self.updated_at = datetime.now(timezone.utc)

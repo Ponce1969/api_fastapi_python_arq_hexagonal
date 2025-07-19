@@ -60,6 +60,46 @@ http://localhost:8000/api/docs
 
 Para contribuir al proyecto, por favor sigue la [Guía de Implementación](/docs/guias/implementacion.md) que detalla el proceso paso a paso para añadir nuevas funcionalidades manteniendo la integridad de la arquitectura.
 
+### 🔍 Verificación de Tipos con Mypy
+
+Este proyecto utiliza Mypy para verificación estática de tipos, garantizando la estabilidad de la API para el equipo frontend:
+
+```bash
+# Verificar tipos en todo el proyecto
+mypy app/ --config-file mypy.ini
+
+# Verificar solo esquemas (más rápido durante desarrollo)
+mypy app/esquemas/ --config-file mypy.ini
+```
+
+### 🔄 CI/CD Pipeline
+
+Cada push ejecuta automáticamente:
+- ✅ Verificación de tipos con Mypy
+- ✅ 117 tests de la suite completa
+- ✅ Validación de migraciones de base de datos
+- 📄 Generación automática de documentación OpenAPI
+- 🦕 Generación de tipos TypeScript para Deno Fresh
+- 🔗 Validación de contratos API-Frontend
+
+Esto garantiza que el equipo frontend (Deno Fresh) siempre reciba una API estable con tipos TypeScript actualizados automáticamente.
+
+### 🦕 Integración con Deno Fresh
+
+Este backend está optimizado para trabajar con el frontend Deno Fresh:
+
+```bash
+# Generar tipos TypeScript desde OpenAPI
+python -c "from app.main import app; import json; json.dump(app.openapi(), open('openapi.json', 'w'), indent=2)"
+deno run --allow-read --allow-write https://deno.land/x/openapi_fetch/scripts/openapi-typescript.ts openapi.json --output api-types.ts
+```
+
+**Beneficios de la integración:**
+- 🎯 **Tipos automáticos**: Los esquemas Pydantic se convierten automáticamente en tipos TypeScript
+- 🔒 **Contratos garantizados**: Mypy + TypeScript = validación en ambos extremos
+- 📚 **Documentación sincronizada**: OpenAPI mantiene frontend y backend alineados
+- 🚀 **Desarrollo ágil**: Cambios en el backend se reflejan automáticamente en tipos del frontend
+
 ## 📝 Licencia
 
 Este proyecto está licenciado bajo [Licencia] - ver el archivo LICENSE para más detalles.

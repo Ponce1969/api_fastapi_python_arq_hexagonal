@@ -73,7 +73,7 @@ class TestAutenticacionServicio:
 
         # Verificar que se llamó al método create_access_token con los datos correctos
         jwt_handler_mock.create_access_token.assert_called_once_with(
-            data={"sub": "1"}
+            subject=1
         )
 
         # Verificar que se devolvió el token esperado
