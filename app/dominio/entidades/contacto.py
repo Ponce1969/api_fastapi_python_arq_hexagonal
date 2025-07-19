@@ -1,7 +1,10 @@
 # app/dominio/entidades/contacto.py
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
-from typing import Optional, Self
+from typing import Optional, TypeVar
+
+# Usar TypeVar como alternativa a Self para compatibilidad con Python 3.10
+T = TypeVar('T', bound='Contacto')
 
 class Contacto:
     def __init__(
@@ -88,7 +91,7 @@ class Contacto:
     def __hash__(self):
         return hash(self.id)
 
-    def marcar_como_leido(self, leido: bool = True):
+    def marcar_como_leido(self, leido: bool = True) -> bool:
         """
         Marca el contacto como leído o no leído.
         """

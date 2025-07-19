@@ -6,6 +6,7 @@ por SQLAlchemy y otros componentes de la capa de infraestructura a excepciones
 de dominio que son significativas para la lógica de negocio.
 """
 import re
+import asyncio
 import traceback
 from typing import Optional, Type
 
@@ -74,6 +75,9 @@ class ExcepcionesMapper:
         elif isinstance(exception, OperationalError):
             return cls._map_operational_error(exception)
         elif isinstance(exception, SQLAlchemyTimeoutError):
+            return cls._map_timeout_error(exception)
+        elif isinstance(exception, asyncio.TimeoutError):
+            # Manejar también los TimeoutError de asyncio
             return cls._map_timeout_error(exception)
         elif isinstance(exception, ProgrammingError):
             return cls._map_programming_error(exception)

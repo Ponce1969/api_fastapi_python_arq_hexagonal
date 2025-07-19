@@ -12,16 +12,28 @@ from app.core.config import settings # Importamos la configuración de la aplica
 # --- Configuración del Motor de la Base de Datos Asíncrono ---
 # El motor de SQLAlchemy es la interfaz principal con la base de datos.
 # Usamos create_async_engine para soporte asíncrono.
-# El driver `asyncpg` es el recomendado para FastAPI y PostgreSQL.
+
+# Configuración base para todos los tipos de bases de datos
+engine_kwargs = {
+    "echo": settings.DB_ECHO,  # Muestra las consultas SQL en la consola (útil para depuración)
+    "pool_pre_ping": True,    # Verifica si las conexiones están vivas antes de usarlas
+}
+
+# Configuración específica para bases de datos que no son SQLite
+if not settings.DATABASE_URL.startswith("sqlite"):
+    # El driver `asyncpg` es el recomendado para FastAPI y PostgreSQL.
+    engine_kwargs.update({
+        "pool_size": settings.DB_POOL_SIZE,       # Número de conexiones persistentes en el pool
+        "max_overflow": settings.DB_MAX_OVERFLOW, # Conexiones adicionales que pueden crearse más allá de pool_size
+        # Usa NullPool si el pooling es manejado externamente (ej. PgBouncer) o en entornos serverless.
+        # De lo contrario, SQLAlchemy usará un QueuePool por defecto, que es ideal para la mayoría de las aplicaciones.
+        "poolclass": NullPool if settings.DB_POOL_SIZE == 0 else None,
+    })
+
+# Crear el motor con la configuración apropiada
 async_engine = create_async_engine(
     settings.DATABASE_URL,
-    echo=settings.DB_ECHO, # Muestra las consultas SQL en la consola (útil para depuración)
-    pool_size=settings.DB_POOL_SIZE, # Número de conexiones persistentes en el pool
-    max_overflow=settings.DB_MAX_OVERFLOW, # Conexiones adicionales que pueden crearse más allá de pool_size
-    pool_pre_ping=True, # Verifica si las conexiones están vivas antes de usarlas
-    # Usa NullPool si el pooling es manejado externamente (ej. PgBouncer) o en entornos serverless.
-    # De lo contrario, SQLAlchemy usará un QueuePool por defecto, que es ideal para la mayoría de las aplicaciones.
-    poolclass=NullPool if settings.DB_POOL_SIZE == 0 else None,
+    **engine_kwargs
 )
 
 # --- Configuración de la Factoría de Sesiones Asíncronas ---

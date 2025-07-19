@@ -1,7 +1,7 @@
 import pytest
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime
+from datetime import datetime, UTC
 
 from app.dominio.entidades.usuario import Usuario
 from app.dominio.excepciones.dominio_excepciones import (
@@ -38,8 +38,8 @@ def mock_usuario():
         full_name="Test User",
         is_active=True,
         id=uuid.uuid4(),
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC)
     )
 
 
