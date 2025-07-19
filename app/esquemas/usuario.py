@@ -1,13 +1,13 @@
 # app/esquemas/usuario.py
 from typing import Optional
 from uuid import UUID
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, ConfigDict
 
 
 # Propiedades base compartidas por todos los esquemas de usuario
 class UsuarioBase(BaseModel):
-    email: EmailStr = Field(..., example="juan.perez@example.com")
-    full_name: Optional[str] = Field(None, example="Juan Pérez", min_length=2, max_length=100)
+    email: EmailStr = Field(..., json_schema_extra={"example": "juan.perez@example.com"})
+    full_name: Optional[str] = Field(None, min_length=2, max_length=100, json_schema_extra={"example": "Juan Pérez"})
     
     @field_validator('full_name')
     def validate_full_name(cls, v):
@@ -20,7 +20,7 @@ class UsuarioBase(BaseModel):
 # Esquema para la creación de un usuario (entrada en el endpoint de registro)
 # Hereda de UsuarioBase y añade la contraseña.
 class UsuarioCrear(UsuarioBase):
-    password: str = Field(..., min_length=8, example="unaContraseñaFuerte123")
+    password: str = Field(..., min_length=8, json_schema_extra={"example": "unaContraseñaFuerte123"})
 
 
 # Esquema para la actualización de un usuario
@@ -33,8 +33,8 @@ class UsuarioActualizar(UsuarioBase):
 
 # Esquema específico para cambio de contraseña
 class UsuarioCambioPassword(BaseModel):
-    current_password: str = Field(..., min_length=1, example="contraseñaActual")
-    new_password: str = Field(..., min_length=8, example="nuevaContraseñaFuerte123")
+    current_password: str = Field(..., min_length=1, json_schema_extra={"example": "contraseñaActual"})
+    new_password: str = Field(..., min_length=8, json_schema_extra={"example": "nuevaContraseñaFuerte123"})
     
     @field_validator('new_password')
     def validate_new_password(cls, v, values):
@@ -50,5 +50,4 @@ class UsuarioLeer(UsuarioBase):
     id: UUID
     is_active: bool
 
-    class Config:
-        from_attributes = True # Permite a Pydantic leer datos desde atributos de objeto (ORM models)
+    model_config = ConfigDict(from_attributes=True)  # Permite a Pydantic leer datos desde atributos de objeto (ORM models)

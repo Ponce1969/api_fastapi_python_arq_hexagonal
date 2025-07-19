@@ -72,6 +72,8 @@ class ExcepcionesMapper:
         """
         if isinstance(exception, IntegrityError):
             return cls._map_integrity_error(exception)
+        elif isinstance(exception, NoResultFound):
+            return cls._map_no_result_found(exception)
         elif isinstance(exception, OperationalError):
             return cls._map_operational_error(exception)
         elif isinstance(exception, SQLAlchemyTimeoutError):
@@ -299,6 +301,33 @@ class ExcepcionesMapper:
             operacion = "eliminación"
         
         return TimeoutDBError(operacion)
+    
+    @classmethod
+    def _map_no_result_found(cls, exception: NoResultFound) -> DominioExcepcion:
+        """
+        Mapea una excepción NoResultFound a una excepción de dominio.
+        
+        Args:
+            exception: La excepción NoResultFound a mapear.
+            
+        Returns:
+            Una excepción de dominio que representa que no se encontró la entidad.
+        """
+        # Intentar determinar el tipo de entidad desde el traceback
+        tb = traceback.extract_tb(exception.__traceback__)
+        
+        # Buscar en el traceback información sobre qué entidad se estaba buscando
+        for frame in tb:
+            filename = frame.filename.lower()
+            if 'usuario' in filename:
+                return EntidadNoEncontradaError("Usuario", "desconocido")
+            elif 'rol' in filename:
+                return EntidadNoEncontradaError("Rol", "desconocido")
+            elif 'contacto' in filename:
+                return EntidadNoEncontradaError("Contacto", "desconocido")
+        
+        # Si no podemos determinar el tipo específico, usar una excepción genérica
+        return EntidadNoEncontradaError("Entidad", "desconocido")
     
     @classmethod
     def _map_programming_error(cls, exception: ProgrammingError) -> DominioExcepcion:
