@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, constr, ConfigDict
 class RolBase(BaseModel):
     """Campos comunes para Rol."""
 
-    name: constr(strip_whitespace=True, min_length=2, max_length=50) = Field(..., json_schema_extra={"example": "admin"})
+    name: str = Field(..., min_length=2, max_length=50, json_schema_extra={"example": "admin"})
     description: Optional[str] = Field(None, json_schema_extra={"example": "Rol con todos los permisos"})
 
 
@@ -19,7 +19,7 @@ class RolCreate(RolBase):
 
 
 class RolUpdate(BaseModel):
-    name: Optional[constr(strip_whitespace=True, min_length=2, max_length=50)] = None
+    name: Optional[str] = Field(None, min_length=2, max_length=50)
     description: Optional[str] = None
 
 

@@ -24,8 +24,8 @@ class UsuarioCrear(UsuarioBase):
 
 
 # Esquema para la actualización de un usuario
-class UsuarioActualizar(UsuarioBase):
-    email: Optional[EmailStr] = None # Todos los campos son opcionales en la actualización
+class UsuarioActualizar(BaseModel):
+    email: Optional[EmailStr] = Field(None, json_schema_extra={"example": "juan.perez@example.com"})
     password: Optional[str] = Field(None, min_length=8)
     full_name: Optional[str] = Field(None, min_length=2, max_length=100)
     is_active: Optional[bool] = None

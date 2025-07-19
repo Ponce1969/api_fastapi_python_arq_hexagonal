@@ -9,12 +9,12 @@ class ContactoBase(BaseModel):
     """Campos comunes para crear o actualizar un contacto."""
 
     # Datos personales
-    name: constr(strip_whitespace=True, min_length=2, max_length=100) = Field(..., json_schema_extra={"example": "Juan Pérez"})
+    name: str = Field(..., min_length=2, max_length=100, json_schema_extra={"example": "Juan Pérez"})
     email: EmailStr = Field(..., json_schema_extra={"example": "juan.perez@example.com"})
     message: Optional[str] = Field(None, json_schema_extra={"example": "Me interesa saber más sobre sus servicios"})
     
     # Información de contacto
-    phone: constr(strip_whitespace=True, min_length=4, max_length=25) = Field(..., json_schema_extra={"example": "+59898765432"})
+    phone: str = Field(..., min_length=4, max_length=25, json_schema_extra={"example": "+59898765432"})
     address: Optional[str] = Field(None, json_schema_extra={"example": "Av. Libertador 1234"})
     city: Optional[str] = Field(None, json_schema_extra={"example": "Montevideo"})
     country: Optional[str] = Field(None, json_schema_extra={"example": "Uruguay"})
