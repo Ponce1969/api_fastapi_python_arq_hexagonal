@@ -7,7 +7,6 @@ de dominio que son significativas para la lógica de negocio.
 """
 import re
 import traceback
-import asyncio
 from typing import Optional, Type
 
 from sqlalchemy.exc import (
@@ -17,7 +16,8 @@ from sqlalchemy.exc import (
     DBAPIError,
     OperationalError,
     TimeoutError as SQLAlchemyTimeoutError,
-    ProgrammingError
+    ProgrammingError,
+    DataError
 )
 
 from app.dominio.excepciones.dominio_excepciones import (
@@ -71,14 +71,14 @@ class ExcepcionesMapper:
         """
         if isinstance(exception, IntegrityError):
             return cls._map_integrity_error(exception)
-        elif isinstance(exception, NoResultFound):
-            return cls._map_no_result_found(exception)
         elif isinstance(exception, OperationalError):
             return cls._map_operational_error(exception)
-        elif isinstance(exception, SQLAlchemyTimeoutError) or isinstance(exception, asyncio.TimeoutError):
+        elif isinstance(exception, SQLAlchemyTimeoutError):
             return cls._map_timeout_error(exception)
         elif isinstance(exception, ProgrammingError):
             return cls._map_programming_error(exception)
+        elif isinstance(exception, DataError):
+            return cls._map_data_error(exception)
         elif isinstance(exception, SQLAlchemyError):
             return cls._map_sqlalchemy_error(exception)
         elif isinstance(exception, DominioExcepcion):
@@ -101,6 +101,57 @@ class ExcepcionesMapper:
         """
         error_message = str(exception)
         
+        # Usar el código SQLSTATE si está disponible (más robusto que regex)
+        if hasattr(exception.orig, 'pgcode'):
+            pg_code = exception.orig.pgcode
+            
+            if pg_code == '23505':  # Unique Violation
+                # Todavía podemos usar regex para extraer detalles específicos
+                unique_match = re.search(cls.PATRON_UNIQUE_VIOLATION, error_message)
+                constraint_name = unique_match.group(1) if unique_match else "desconocido"
+                
+                if "email" in constraint_name.lower() or "correo" in constraint_name.lower():
+                    email_match = re.search(cls.PATRON_EMAIL_COLUMN, error_message)
+                    email = email_match.group(1) if email_match else "desconocido"
+                    return EmailYaRegistradoError(email)
+                return DominioExcepcion(f"Violación de unicidad: {constraint_name}")
+                
+            elif pg_code == '23503':  # Foreign Key Violation
+                fk_details_match = re.search(cls.PATRON_FOREIGN_KEY_DETAILS, error_message)
+                if fk_details_match:
+                    campo = fk_details_match.group(1)
+                    valor = fk_details_match.group(2)
+                    tabla = fk_details_match.group(3)
+                    entidad = tabla.replace("_", " ").title()
+                    return ClaveForaneaError(entidad, valor)
+                
+                # Intentar extraer al menos el nombre de la restricción para dar un mensaje más informativo
+                fk_match = re.search(cls.PATRON_FOREIGN_KEY_VIOLATION, error_message)
+                constraint_name = fk_match.group(1) if fk_match else "desconocida"
+                return ClaveForaneaError(
+                    "Entidad referenciada", 
+                    "no encontrada", 
+                    f"Violación de clave foránea en restricción: {constraint_name}"
+                )
+                
+            elif pg_code == '23514':  # Check Violation
+                check_match = re.search(cls.PATRON_CHECK_CONSTRAINT, error_message)
+                constraint_name = check_match.group(1) if check_match else "desconocido"
+                check_details_match = re.search(cls.PATRON_CHECK_DETAILS, error_message)
+                if check_details_match:
+                    campo = check_details_match.group(1)
+                    valor = check_details_match.group(2)
+                    return RestriccionCheckError(campo, valor, constraint_name)
+                
+                # Si no podemos extraer los detalles específicos, dar un mensaje más descriptivo
+                # basado en el nombre de la restricción
+                return RestriccionCheckError(
+                    "valor proporcionado", 
+                    "no cumple con las restricciones", 
+                    f"Violación de restricción de verificación: {constraint_name}"
+                )
+        
+        # Fallback a la lógica basada en regex si no hay pgcode disponible
         # Detectar violaciones de restricciones únicas
         unique_match = re.search(cls.PATRON_UNIQUE_VIOLATION, error_message)
         if unique_match:
@@ -141,35 +192,39 @@ class ExcepcionesMapper:
         return DominioExcepcion(f"Error de integridad de datos: {error_message}")
     
     @classmethod
-    def _map_no_result_found(cls, exception: NoResultFound) -> DominioExcepcion:
+    def _map_data_error(cls, exception: DataError) -> DominioExcepcion:
         """
-        Mapea un error de resultado no encontrado de SQLAlchemy a una excepción de dominio.
+        Mapea un error de datos de SQLAlchemy a una excepción de dominio.
+        
+        Los errores de datos (DataError) ocurren cuando los datos proporcionados no son
+        compatibles con el tipo de columna, como valores demasiado largos para un campo,
+        valores numéricos fuera de rango, o formatos de fecha/hora inválidos.
         
         Args:
-            exception: El error de resultado no encontrado a mapear.
+            exception: La excepción DataError de SQLAlchemy a mapear.
             
         Returns:
-            Una excepción de dominio que representa el error de resultado no encontrado.
+            DominioExcepcion: Una excepción de dominio que describe el problema de datos
+            de manera significativa para la lógica de negocio.
         """
-        # Intentar determinar el tipo de entidad a partir del traceback
-        tb = traceback.extract_tb(exception.__traceback__)
-        tipo_entidad = "entidad"
+        error_message = str(exception)
         
-        # Buscar pistas sobre el tipo de entidad en el traceback
-        for frame in tb:
-            filename = frame.filename
-            function = frame.name
+        # Usar el código SQLSTATE si está disponible
+        if hasattr(exception.orig, 'pgcode'):
+            pg_code = exception.orig.pgcode
             
-            # Buscar en el nombre de la función o archivo para determinar el tipo de entidad
-            if "usuario" in filename.lower() or "usuario" in function.lower():
-                return UsuarioNoEncontradoError("El usuario solicitado no existe")
-            elif "rol" in filename.lower() or "rol" in function.lower():
-                return RolNoEncontradoError("El rol solicitado no existe")
-            elif "contacto" in filename.lower() or "contacto" in function.lower():
-                return ContactoNoEncontradoError("El contacto solicitado no existe")
+            # Códigos comunes de DataError
+            if pg_code == '22001':  # string_data_right_truncation
+                return DominioExcepcion(f"Error de datos: El valor es demasiado largo para el campo. Detalles: {error_message}")
+            elif pg_code == '22003':  # numeric_value_out_of_range
+                return DominioExcepcion(f"Error de datos: El valor numérico está fuera de rango. Detalles: {error_message}")
+            elif pg_code == '22007':  # invalid_datetime_format
+                return DominioExcepcion(f"Error de datos: Formato de fecha/hora inválido. Detalles: {error_message}")
+            elif pg_code == '22P02':  # invalid_text_representation
+                return DominioExcepcion(f"Error de datos: Formato de texto inválido para el tipo de datos. Detalles: {error_message}")
         
-        # Si no podemos determinar el tipo específico de entidad
-        return EntidadNoEncontradaError(tipo_entidad, "desconocido")
+        # Si no podemos determinar el tipo específico de error de datos
+        return DominioExcepcion(f"Error de datos: El valor proporcionado no es válido para este campo. Detalles: {error_message}")
     
     @classmethod
     def _map_operational_error(cls, exception: OperationalError) -> DominioExcepcion:
@@ -184,6 +239,26 @@ class ExcepcionesMapper:
         """
         error_message = str(exception)
         
+        # Usar el código SQLSTATE si está disponible (más robusto que regex)
+        if hasattr(exception.orig, 'pgcode'):
+            pg_code = exception.orig.pgcode
+            
+            # Códigos comunes de errores operacionales
+            if pg_code.startswith('08'):  # Errores de conexión (08XXX)
+                return ConexionDBError(f"Error de conexión a la base de datos: {error_message}")
+            elif pg_code.startswith('42'):  # Errores de sintaxis/permisos (42XXX)
+                if pg_code == '42501':  # insufficient_privilege
+                    return PermisosDBError(f"Privilegios insuficientes para realizar la operación: {error_message}")
+                else:
+                    return PersistenciaError(f"Error de sintaxis SQL: {error_message}")
+            elif pg_code.startswith('53'):  # Errores de recursos (53XXX)
+                return RecursosDBError(f"Recursos insuficientes en la base de datos: {error_message}")
+            elif pg_code.startswith('57'):  # Errores de operador (57XXX)
+                return PersistenciaError(f"Error de operador en la base de datos: {error_message}")
+            elif pg_code.startswith('58'):  # Errores de sistema (58XXX)
+                return PersistenciaError(f"Error de sistema en la base de datos: {error_message}")
+        
+        # Fallback a la lógica basada en regex si no hay pgcode disponible
         # Detectar errores de conexión
         if re.search(cls.PATRON_CONNECTION_ERROR, error_message, re.IGNORECASE):
             return ConexionDBError(f"Error de conexión a la base de datos: {error_message}")

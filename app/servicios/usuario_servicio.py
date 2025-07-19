@@ -72,14 +72,27 @@ class UsuarioServicio:
         """
         Actualiza los datos de un usuario existente.
         Utiliza los métodos de la entidad de dominio para aplicar los cambios.
+        
+        Args:
+            user_id: ID del usuario a actualizar.
+            email: Nuevo correo electrónico (opcional).
+            full_name: Nuevo nombre completo (opcional).
+            is_active: Nuevo estado de activación (opcional).
+            
+        Returns:
+            Usuario: La entidad de usuario actualizada.
+            
+        Raises:
+            UsuarioNoEncontradoError: Si no existe un usuario con el ID proporcionado.
+            EmailYaRegistradoError: Si el nuevo email ya está registrado para otro usuario.
         """
         async with self.uow as uow:
             # Obtenemos el usuario dentro del contexto de la transacción
             usuario = await uow.usuarios.get_by_id(user_id)
             if not usuario:
                 raise UsuarioNoEncontradoError(str(user_id))
-                
-            updated_at_original = usuario.updated_at
+            
+            cambios_realizados = False
 
             if email is not None:
                 email_obj = CorreoElectronico(email)
@@ -88,21 +101,24 @@ class UsuarioServicio:
                     if otro_usuario and otro_usuario.id != user_id:
                         raise EmailYaRegistradoError(email_obj.valor)
                     usuario.actualizar_email(email_obj.valor)
+                    cambios_realizados = True
 
             if full_name is not None:
                 usuario.actualizar_nombre(full_name)
+                cambios_realizados = True
 
             if is_active is not None:
-                if is_active:
+                if is_active and not usuario.is_active:
                     usuario.activar()
-                else:
+                    cambios_realizados = True
+                elif not is_active and usuario.is_active:
                     usuario.desactivar()
+                    cambios_realizados = True
 
-            # Solo guardamos en la base de datos si la entidad ha sido modificada
-            if usuario.updated_at != updated_at_original:
-                return await uow.usuarios.save(usuario)
-
-            return usuario
+            # Siempre guardamos el usuario para asegurar que los cambios se persistan
+            # Incluso si no hay cambios aparentes, podría haber lógica en el repositorio
+            # que necesite ejecutarse (como actualizar timestamps)
+            return await uow.usuarios.save(usuario)
 
     async def eliminar_usuario(self, user_id: UUID) -> None:
         """Elimina un usuario por su ID."""

@@ -1,6 +1,5 @@
 # app/main.py
 from fastapi import FastAPI, Request, status, Depends, HTTPException
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
@@ -8,11 +7,10 @@ from contextlib import asynccontextmanager
 import logging
 import time
 import secrets
-from typing import Callable, Optional
+from typing import Callable
 
 from app.core.config import settings
 from app.api.v2.api import api_router
-from app.dominio.excepciones.dominio_excepciones import DominioExcepcion
 from app.infraestructura.persistencia.sesion import async_engine
 from app.infraestructura.persistencia.modelos_orm import Base
 from app.api.middlewares.exception_handler import registrar_manejadores_excepciones
@@ -38,7 +36,10 @@ async def lifespan(app: FastAPI):
     
     # Inicializar la base de datos (si es necesario)
     try:
-        # Crear tablas si no existen (útil para desarrollo)
+        # NOTA: En entornos de producción, se recomienda usar herramientas de migración como Alembic
+        # en lugar de create_all, ya que este último no maneja cambios o eliminaciones de tablas
+        # existentes y puede llevar a pérdida de datos o conflictos.
+        # create_all es útil principalmente para desarrollo y pruebas.
         async with async_engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
         logger.info("Tablas de la base de datos verificadas/creadas.")

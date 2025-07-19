@@ -40,6 +40,9 @@ async def listar_usuarios(
 @router.get(
     "/usuarios/{user_id}",
     response_model=UsuarioLeer,
+    responses={
+        404: {"description": "Usuario no encontrado"}
+    },
     summary="Obtener usuario por ID",
 )
 async def obtener_usuario(
@@ -47,15 +50,20 @@ async def obtener_usuario(
     _current_user: Usuario = Depends(get_current_user),
     usuario_servicio: UsuarioServicio = Depends(get_usuario_servicio),
 ):
-    try:
-        return await usuario_servicio.obtener_usuario_por_id(user_id)
-    except UsuarioNoEncontradoError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    """Obtiene un usuario por su ID.
+    
+    Utiliza el manejador global de excepciones para gestionar UsuarioNoEncontradoError.
+    """
+    return await usuario_servicio.obtener_usuario_por_id(user_id)
 
 
 @router.put(
     "/usuarios/{user_id}",
     response_model=UsuarioLeer,
+    responses={
+        404: {"description": "Usuario no encontrado"},
+        409: {"description": "Email ya registrado para otro usuario"}
+    },
     summary="Actualizar datos de usuario",
 )
 @rate_limit(SENSITIVE_RATE_LIMIT)  # Limita a 50 solicitudes por minuto
@@ -66,21 +74,28 @@ async def actualizar_usuario(
     current_user: Usuario = Depends(get_current_user),
     usuario_servicio: UsuarioServicio = Depends(get_usuario_servicio),
 ):
-    # TODO: Implementar verificación de permisos (solo admin o el mismo usuario)
-    try:
-        return await usuario_servicio.actualizar_usuario(
-            user_id=user_id,
-            email=usuario_in.email,
-            full_name=usuario_in.full_name,
-            is_active=usuario_in.is_active,
-        )
-    except (UsuarioNoEncontradoError, EmailYaRegistradoError) as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    """Actualiza los datos de un usuario existente.
+    
+    Utiliza el manejador global de excepciones para gestionar:
+    - UsuarioNoEncontradoError (404)
+    - EmailYaRegistradoError (409)
+    
+    TODO: Implementar verificación de permisos (solo admin o el mismo usuario)
+    """
+    return await usuario_servicio.actualizar_usuario(
+        user_id=user_id,
+        email=usuario_in.email,
+        full_name=usuario_in.full_name,
+        is_active=usuario_in.is_active,
+    )
 
 
 @router.delete(
     "/usuarios/{user_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        404: {"description": "Usuario no encontrado"}
+    },
     summary="Eliminar usuario",
 )
 @rate_limit(SENSITIVE_RATE_LIMIT)  # Limita a 50 solicitudes por minuto
@@ -90,11 +105,13 @@ async def eliminar_usuario(
     current_user: Usuario = Depends(get_current_user),
     usuario_servicio: UsuarioServicio = Depends(get_usuario_servicio),
 ):
-    # TODO: Implementar verificación de permisos (solo admin o el mismo usuario)
-    try:
-        await usuario_servicio.eliminar_usuario(user_id)
-    except UsuarioNoEncontradoError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    """Elimina un usuario por su ID.
+    
+    Utiliza el manejador global de excepciones para gestionar UsuarioNoEncontradoError (404).
+    
+    TODO: Implementar verificación de permisos (solo admin o el mismo usuario)
+    """
+    await usuario_servicio.eliminar_usuario(user_id)
 
 
 # --------------------------------------------------------------
@@ -103,6 +120,9 @@ async def eliminar_usuario(
 @router.post(
     "/usuarios/{user_id}/roles/{rol_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        404: {"description": "Usuario o rol no encontrado"}
+    },
     summary="Asignar un rol a un usuario",
 )
 @rate_limit(SENSITIVE_RATE_LIMIT)  # Limita a 50 solicitudes por minuto
@@ -113,16 +133,21 @@ async def asignar_rol_a_usuario(
     current_user: Annotated[Usuario, Depends(get_current_user)],
     rol_servicio: Annotated[RolServicio, Depends(get_rol_servicio)],
 ):
-    """Añade el rol indicado al usuario si no lo tiene ya."""
-    try:
-        await rol_servicio.asignar_rol_a_usuario(user_id=user_id, rol_id=rol_id)
-    except (UsuarioNoEncontradoError, RolNoEncontradoError) as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    """Añade el rol indicado al usuario si no lo tiene ya.
+    
+    Utiliza el manejador global de excepciones para gestionar:
+    - UsuarioNoEncontradoError (404)
+    - RolNoEncontradoError (404)
+    """
+    await rol_servicio.asignar_rol_a_usuario(user_id=user_id, rol_id=rol_id)
 
 
 @router.delete(
     "/usuarios/{user_id}/roles/{rol_id}",
     status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        404: {"description": "Usuario o rol no encontrado"}
+    },
     summary="Remover un rol de un usuario",
 )
 @rate_limit(SENSITIVE_RATE_LIMIT)  # Limita a 50 solicitudes por minuto
@@ -133,8 +158,10 @@ async def remover_rol_de_usuario(
     current_user: Annotated[Usuario, Depends(get_current_user)],
     rol_servicio: Annotated[RolServicio, Depends(get_rol_servicio)],
 ):
-    """Quita el rol indicado del usuario si lo tiene."""
-    try:
-        await rol_servicio.remover_rol_de_usuario(user_id=user_id, rol_id=rol_id)
-    except (UsuarioNoEncontradoError, RolNoEncontradoError) as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    """Quita el rol indicado del usuario si lo tiene.
+    
+    Utiliza el manejador global de excepciones para gestionar:
+    - UsuarioNoEncontradoError (404)
+    - RolNoEncontradoError (404)
+    """
+    await rol_servicio.remover_rol_de_usuario(user_id=user_id, rol_id=rol_id)

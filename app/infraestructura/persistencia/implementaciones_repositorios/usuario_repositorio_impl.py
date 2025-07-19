@@ -2,10 +2,13 @@
 from typing import Optional, List
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.dominio.entidades.usuario import Usuario
 from app.dominio.repositorios.usuario_repositorio import IUsuarioRepositorio
+from app.dominio.excepciones.dominio_excepciones import UsuarioNoEncontradoError, RolNoEncontradoError
 from app.infraestructura.persistencia.modelos_orm import UsuarioORM, RolORM
+from app.infraestructura.persistencia.excepciones.persistencia_excepciones import ExcepcionesMapper
 from .sqlalchemy_base_repositorio import SQLAlchemyBaseRepositorio
 
 
@@ -60,19 +63,36 @@ class UsuarioRepositorioImpl(SQLAlchemyBaseRepositorio, IUsuarioRepositorio):
         Args:
             usuario_id: UUID del usuario
             rol_id: UUID del rol a asignar
+            
+        Raises:
+            UsuarioNoEncontradoError: Si el usuario no existe
+            RolNoEncontradoError: Si el rol no existe
+            DominioExcepcion: Si ocurre un error en la capa de persistencia
         """
-        # Obtener los modelos ORM
-        usuario_orm: UsuarioORM = await self.db_session.get(UsuarioORM, usuario_id)
-        rol_orm: RolORM = await self.db_session.get(RolORM, rol_id)
+        from app.dominio.excepciones.dominio_excepciones import UsuarioNoEncontradoError, RolNoEncontradoError
         
-        # Verificar que ambos existan
-        if not usuario_orm or not rol_orm:
-            return
-        
-        # Asignar el rol si no está ya asignado
-        if rol_orm not in usuario_orm.roles:
-            usuario_orm.roles.append(rol_orm)
-            # No hacemos commit aquí, eso lo maneja el UnitOfWork
+        try:
+            # Obtener los modelos ORM
+            usuario_orm: UsuarioORM = await self.db_session.get(UsuarioORM, usuario_id)
+            if not usuario_orm:
+                raise UsuarioNoEncontradoError(f"Usuario con ID {usuario_id} no encontrado")
+                
+            rol_orm: RolORM = await self.db_session.get(RolORM, rol_id)
+            if not rol_orm:
+                raise RolNoEncontradoError(f"Rol con ID {rol_id} no encontrado")
+            
+            # Asignar el rol si no está ya asignado
+            if rol_orm not in usuario_orm.roles:
+                usuario_orm.roles.append(rol_orm)
+                self.db_session.add(usuario_orm)  # Aseguramos que SQLAlchemy detecte el cambio
+                await self.db_session.flush()
+                # No hacemos commit aquí, eso lo maneja el UnitOfWork
+        except (UsuarioNoEncontradoError, RolNoEncontradoError):
+            # Estas ya son excepciones de dominio, las relanzamos directamente
+            raise
+        except SQLAlchemyError as e:
+            # Traducimos excepciones técnicas a excepciones de dominio
+            raise ExcepcionesMapper.wrap_exception(e)
     
     async def remover_rol(self, usuario_id: UUID, rol_id: UUID) -> None:
         """Remueve un rol de un usuario.
@@ -80,19 +100,36 @@ class UsuarioRepositorioImpl(SQLAlchemyBaseRepositorio, IUsuarioRepositorio):
         Args:
             usuario_id: UUID del usuario
             rol_id: UUID del rol a remover
+            
+        Raises:
+            UsuarioNoEncontradoError: Si el usuario no existe
+            RolNoEncontradoError: Si el rol no existe
+            DominioExcepcion: Si ocurre un error en la capa de persistencia
         """
-        # Obtener los modelos ORM
-        usuario_orm: UsuarioORM = await self.db_session.get(UsuarioORM, usuario_id)
-        rol_orm: RolORM = await self.db_session.get(RolORM, rol_id)
+        from app.dominio.excepciones.dominio_excepciones import UsuarioNoEncontradoError, RolNoEncontradoError
         
-        # Verificar que ambos existan
-        if not usuario_orm or not rol_orm:
-            return
-        
-        # Remover el rol si está asignado
-        if rol_orm in usuario_orm.roles:
-            usuario_orm.roles.remove(rol_orm)
-            # No hacemos commit aquí, eso lo maneja el UnitOfWork
+        try:
+            # Obtener los modelos ORM
+            usuario_orm: UsuarioORM = await self.db_session.get(UsuarioORM, usuario_id)
+            if not usuario_orm:
+                raise UsuarioNoEncontradoError(f"Usuario con ID {usuario_id} no encontrado")
+                
+            rol_orm: RolORM = await self.db_session.get(RolORM, rol_id)
+            if not rol_orm:
+                raise RolNoEncontradoError(f"Rol con ID {rol_id} no encontrado")
+            
+            # Remover el rol si está asignado
+            if rol_orm in usuario_orm.roles:
+                usuario_orm.roles.remove(rol_orm)
+                self.db_session.add(usuario_orm)  # Aseguramos que SQLAlchemy detecte el cambio
+                await self.db_session.flush()
+                # No hacemos commit aquí, eso lo maneja el UnitOfWork
+        except (UsuarioNoEncontradoError, RolNoEncontradoError):
+            # Estas ya son excepciones de dominio, las relanzamos directamente
+            raise
+        except SQLAlchemyError as e:
+            # Traducimos excepciones técnicas a excepciones de dominio
+            raise ExcepcionesMapper.wrap_exception(e)
 
     # Los métodos get_by_id, delete, y get_all son heredados directamente
     # de SQLAlchemyBaseRepositorio y funcionan sin necesidad de reimplementación.
